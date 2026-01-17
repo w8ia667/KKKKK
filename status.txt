@@ -1,1 +1,295 @@
-ON
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+local HttpService = game:GetService("HttpService")
+
+local Lib = {
+    Icons = {
+        ["home"] = "rbxassetid://10723407389",
+        ["terminal"] = "rbxassetid://10723367244",
+        ["combat"] = "rbxassetid://10709769508",
+        ["settings"] = "rbxassetid://10709810948"
+    }
+}
+
+function Lib:MakeWindow(cfg)
+    local hubName = cfg.Name or "Zyronis Hub"
+    local bgId = cfg.Background or "rbxassetid://81474766892946"
+
+    local MainGui = Instance.new("ScreenGui")
+    MainGui.Name = HttpService:GenerateGUID(false)
+    MainGui.Parent = (gethui and gethui()) or CoreGui
+
+    local Main = Instance.new("Frame")
+    Main.Name = "Main"
+    Main.Parent = MainGui
+    Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    Main.Position = UDim2.new(0.5, -275, 0.5, -190)
+    Main.Size = UDim2.new(0, 550, 0, 380)
+    Main.ClipsDescendants = true
+    Main.BorderSizePixel = 0
+
+    local BG = Instance.new("ImageLabel")
+    BG.Parent = Main
+    BG.Size = UDim2.new(1, 0, 1, 0)
+    BG.Image = bgId
+    BG.ImageTransparency = 0.8
+    BG.ScaleType = Enum.ScaleType.Crop
+    BG.ZIndex = 0
+
+    Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
+
+    local Sidebar = Instance.new("Frame")
+    Sidebar.Parent = Main
+    Sidebar.Size = UDim2.new(0, 160, 1, 0)
+    Sidebar.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+    Sidebar.BackgroundTransparency = 0.4
+    Sidebar.ZIndex = 2
+
+    local SidebarLayout = Instance.new("UIListLayout")
+    SidebarLayout.Parent = Sidebar
+    SidebarLayout.Padding = UDim.new(0, 5)
+    SidebarLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+    local Title = Instance.new("TextLabel")
+    Title.Parent = Sidebar
+    Title.Size = UDim2.new(1, 0, 0, 45)
+    Title.BackgroundTransparency = 1
+    Title.Text = hubName:upper()
+    Title.TextColor3 = Color3.fromRGB(139, 0, 0)
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 14
+
+    local PageHolder = Instance.new("Frame")
+    PageHolder.Parent = Main
+    PageHolder.Position = UDim2.new(0, 170, 0, 10)
+    PageHolder.Size = UDim2.new(1, -180, 1, -20)
+    PageHolder.BackgroundTransparency = 1
+
+    local dragStart, startPos, dragging
+    Main.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = Main.Position
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function() dragging = false end)
+
+    function Lib:AddMinimizeButton()
+        local MinBtn = Instance.new("ImageButton")
+        MinBtn.Parent = MainGui
+        MinBtn.Size = UDim2.new(0, 45, 0, 45)
+        MinBtn.Position = UDim2.new(0.05, 0, 0.05, 0)
+        MinBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+        MinBtn.Image = bgId
+        Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(1, 0)
+        Instance.new("UIStroke", MinBtn).Color = Color3.fromRGB(139, 0, 0)
+        MinBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
+    end
+
+    local Tabs = {Active = nil}
+
+    function Tabs:MakeTab(tName, tIcon)
+        local Page = Instance.new("ScrollingFrame")
+        Page.Parent = PageHolder
+        Page.Size = UDim2.new(1, 0, 1, 0)
+        Page.BackgroundTransparency = 1
+        Page.Visible = false
+        Page.ScrollBarThickness = 0
+        Page.CanvasSize = UDim2.new(0, 0, 0, 0)
+        local PageLayout = Instance.new("UIListLayout", Page)
+        PageLayout.Padding = UDim.new(0, 8)
+
+        local TabBtn = Instance.new("TextButton")
+        TabBtn.Parent = Sidebar
+        TabBtn.Size = UDim2.new(0.9, 0, 0, 35)
+        TabBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+        TabBtn.Text = "      " .. tName
+        TabBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
+        TabBtn.Font = Enum.Font.GothamMedium
+        TabBtn.TextSize = 12
+        TabBtn.TextXAlignment = Enum.TextXAlignment.Left
+        Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 6)
+
+        local Icon = Instance.new("ImageLabel", TabBtn)
+        Icon.Size = UDim2.new(0, 18, 0, 18)
+        Icon.Position = UDim2.new(0, 8, 0.5, -9)
+        Icon.BackgroundTransparency = 1
+        Icon.Image = Lib.Icons[tIcon] or Lib.Icons["home"]
+        Icon.ImageColor3 = Color3.fromRGB(150, 150, 150)
+
+        TabBtn.MouseButton1Click:Connect(function()
+            for _, v in pairs(PageHolder:GetChildren()) do v.Visible = false end
+            for _, v in pairs(Sidebar:GetChildren()) do
+                if v:IsA("TextButton") then
+                    v.TextColor3 = Color3.fromRGB(150, 150, 150)
+                    v.ImageLabel.ImageColor3 = Color3.fromRGB(150, 150, 150)
+                end
+            end
+            Page.Visible = true
+            TabBtn.TextColor3 = Color3.fromRGB(139, 0, 0)
+            Icon.ImageColor3 = Color3.fromRGB(139, 0, 0)
+        end)
+
+        if not Tabs.Active then
+            Page.Visible = true
+            TabBtn.TextColor3 = Color3.fromRGB(139, 0, 0)
+            Icon.ImageColor3 = Color3.fromRGB(139, 0, 0)
+            Tabs.Active = Page
+        end
+
+        local Comp = {}
+
+        function Comp:AddSection(sName)
+            local S = Instance.new("TextLabel", Page)
+            S.Size = UDim2.new(1, -10, 0, 25)
+            S.BackgroundTransparency = 1
+            S.Text = "—— " .. sName:upper() .. " ————————"
+            S.TextColor3 = Color3.fromRGB(80, 80, 80)
+            S.Font = Enum.Font.GothamBold
+            S.TextSize = 10
+            S.TextXAlignment = Enum.TextXAlignment.Left
+            Page.CanvasSize = UDim2.new(0, 0, 0, PageLayout.AbsoluteContentSize.Y)
+        end
+
+        function Comp:AddButton(txt, cb)
+            local B = Instance.new("TextButton", Page)
+            B.Size = UDim2.new(1, -10, 0, 38)
+            B.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+            B.Text = "  " .. txt
+            B.TextColor3 = Color3.fromRGB(255, 255, 255)
+            B.Font = Enum.Font.GothamMedium
+            B.TextSize = 13
+            B.TextXAlignment = Enum.TextXAlignment.Left
+            Instance.new("UICorner", B).CornerRadius = UDim.new(0, 6)
+            B.MouseButton1Click:Connect(cb)
+            Page.CanvasSize = UDim2.new(0, 0, 0, PageLayout.AbsoluteContentSize.Y)
+        end
+
+        function Comp:AddToggle(txt, cb)
+            local state = false
+            local T = Instance.new("TextButton", Page)
+            T.Size = UDim2.new(1, -10, 0, 38)
+            T.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+            T.Text = "  " .. txt
+            T.TextColor3 = Color3.fromRGB(200, 200, 200)
+            T.Font = Enum.Font.GothamMedium
+            T.TextXAlignment = Enum.TextXAlignment.Left
+            Instance.new("UICorner", T).CornerRadius = UDim.new(0, 6)
+            local b = Instance.new("Frame", T)
+            b.Size = UDim2.new(0, 18, 0, 18)
+            b.Position = UDim2.new(1, -28, 0.5, -9)
+            b.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+            T.MouseButton1Click:Connect(function()
+                state = not state
+                b.BackgroundColor3 = state and Color3.fromRGB(139, 0, 0) or Color3.fromRGB(40, 40, 40)
+                cb(state)
+            end)
+        end
+
+        function Comp:AddSlider(txt, min, max, def, cb)
+            local S = Instance.new("Frame", Page)
+            S.Size = UDim2.new(1, -10, 0, 45)
+            S.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+            Instance.new("UICorner", S)
+            local lab = Instance.new("TextLabel", S)
+            lab.Text = "  " .. txt .. ": " .. def
+            lab.Size = UDim2.new(1, 0, 0, 25)
+            lab.BackgroundTransparency = 1
+            lab.TextColor3 = Color3.fromRGB(255, 255, 255)
+            lab.Font = Enum.Font.Gotham
+            lab.TextSize = 12
+            lab.TextXAlignment = Enum.TextXAlignment.Left
+            local bar = Instance.new("TextButton", S)
+            bar.Position = UDim2.new(0.05, 0, 0.7, 0)
+            bar.Size = UDim2.new(0.9, 0, 0, 4)
+            bar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            bar.Text = ""
+            local fill = Instance.new("Frame", bar)
+            fill.Size = UDim2.new((def-min)/(max-min), 0, 1, 0)
+            fill.BackgroundColor3 = Color3.fromRGB(139, 0, 0)
+            bar.MouseButton1Down:Connect(function()
+                local move = UserInputService.InputChanged:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                        local p = math.clamp((input.Position.X - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1)
+                        fill.Size = UDim2.new(p, 0, 1, 0)
+                        local v = math.floor(min + (max-min) * p)
+                        lab.Text = "  " .. txt .. ": " .. v
+                        cb(v)
+                    end
+                end)
+                UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then move:Disconnect() end end)
+            end)
+        end
+
+        function Comp:AddTextbox(txt, def, cb)
+            local T = Instance.new("TextBox", Page)
+            T.Size = UDim2.new(1, -10, 0, 38)
+            T.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+            T.Text = def
+            T.PlaceholderText = txt
+            T.TextColor3 = Color3.fromRGB(255, 255, 255)
+            T.Font = Enum.Font.Gotham
+            T.TextSize = 13
+            Instance.new("UICorner", T)
+            T.FocusLost:Connect(function() cb(T.Text) end)
+        end
+
+        function Comp:AddParagraph(t, d)
+            local F = Instance.new("Frame", Page)
+            F.Size = UDim2.new(1, -10, 0, 50)
+            F.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+            Instance.new("UICorner", F)
+            local tl = Instance.new("TextLabel", F)
+            tl.Text = "  " .. t
+            tl.Size = UDim2.new(1, 0, 0, 25)
+            tl.TextColor3 = Color3.fromRGB(139, 0, 0)
+            tl.BackgroundTransparency = 1
+            tl.Font = Enum.Font.GothamBold
+            tl.TextXAlignment = Enum.TextXAlignment.Left
+            local dl = Instance.new("TextLabel", F)
+            dl.Text = "  " .. d
+            dl.Position = UDim2.new(0, 0, 0, 20)
+            dl.Size = UDim2.new(1, 0, 0, 25)
+            dl.TextColor3 = Color3.fromRGB(200, 200, 200)
+            dl.BackgroundTransparency = 1
+            dl.Font = Enum.Font.Gotham
+            dl.TextSize = 11
+            dl.TextXAlignment = Enum.TextXAlignment.Left
+        end
+
+        function Comp:AddLabel(txt)
+            local L = Instance.new("TextLabel", Page)
+            L.Size = UDim2.new(1, -10, 0, 20)
+            L.BackgroundTransparency = 1
+            L.Text = "  " .. txt
+            L.TextColor3 = Color3.fromRGB(255, 255, 255)
+            L.Font = Enum.Font.Gotham
+            L.TextSize = 12
+            L.TextXAlignment = Enum.TextXAlignment.Left
+            return {Set = function(s, nt) L.Text = "  " .. nt end}
+        end
+
+        function Comp:AddImage(id)
+            local I = Instance.new("ImageLabel", Page)
+            I.Size = UDim2.new(1, -10, 0, 180)
+            I.Image = "rbxassetid://" .. tostring(id):gsub("rbxassetid://", "")
+            I.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+            I.ScaleType = Enum.ScaleType.Fit
+            Instance.new("UICorner", I)
+        end
+
+        return Comp
+    end
+    return Tabs
+end
+
+return Lib
